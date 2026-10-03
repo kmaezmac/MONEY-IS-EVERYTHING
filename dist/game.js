@@ -4,13 +4,13 @@ const $ = id => document.getElementById(id);
 const canvas=$('game'), ctx=canvas.getContext('2d'), field=$('field');
 const DURATION=90;
 const STAGES=[
- {age:6,name:'こども時代',en:'CHILDHOOD',icon:'🧒',base:100,event:'6歳。おこづかいを集めよう！',color:'#75c791'},
+ {age:0,name:'こども時代',en:'CHILDHOOD',icon:'🧒',base:100,event:'0歳。人生スタート！お金を集めよう！',color:'#75c791'},
  {age:18,name:'青春時代',en:'YOUTH',icon:'🧑',base:1000,event:'18歳。はじめてのアルバイト！',color:'#72d4c8'},
  {age:30,name:'おとな時代',en:'ADULTHOOD',icon:'🧑‍💼',base:10000,event:'30歳。お給料もチャンスも急上昇！',color:'#9ac4e4'},
  {age:50,name:'円熟時代',en:'MATURITY',icon:'🧑‍🦳',base:50000,event:'50歳。人生の稼ぎどき、到来！',color:'#cbb3e7'},
  {age:70,name:'黄金時代',en:'GOLDEN YEARS',icon:'🧓',base:100000,event:'70歳。まだまだ、これから黄金時代！',color:'#f4cd75'}
 ];
-let w=1000,h=475,dpr=1,mode='intro',elapsed=0,age=6,stageIndex=0,money=0,gross=0,expenses=0,combo=0,maxCombo=0,lastCatch=-10,spawnClock=0,magnetTime=0,magnetCooldown=0,eventClock=0,shake=0,rush=false,lastRush=-1,frame=0;
+let w=1000,h=475,dpr=1,mode='intro',elapsed=0,age=0,stageIndex=0,money=0,gross=0,expenses=0,combo=0,maxCombo=0,lastCatch=-10,spawnClock=0,magnetTime=0,magnetCooldown=0,eventClock=0,shake=0,rush=false,lastRush=-1,frame=0;
 let player={x:500,target:500},drops=[],particles=[],labels=[],keys=new Set(),pointerDown=false,sound=false,audio=null;
 const yen=n=>'¥'+Math.floor(n).toLocaleString('ja-JP');
 const rand=(a,b)=>a+Math.random()*(b-a);
@@ -34,9 +34,11 @@ function syncHud(){
  $('magnet-charge').style.width=(100*(1-magnetCooldown/15))+'%';
 }
 function multiplier(){return combo>=16?3:combo>=8?2:1;}
-function start(){elapsed=0;age=6;stageIndex=0;money=0;gross=0;expenses=0;combo=0;maxCombo=0;lastCatch=-10;spawnClock=.1;magnetTime=0;magnetCooldown=0;eventClock=0;shake=0;rush=false;lastRush=-1;drops=[];particles=[];labels=[];keys.clear();player.x=w/2;player.target=w/2;mode='playing';$('intro').classList.add('hidden');$('result').classList.add('hidden');$('paused').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ';$('pause').setAttribute('aria-label','一時停止');$('tip').textContent='🧲 下の磁石ボタン / SPACE で、お金をまとめ取り！';announce(STAGES[0].event);syncHud();canvas.focus({preventScroll:true});beep(550);}
+function start(){elapsed=0;age=0;stageIndex=0;money=0;gross=0;expenses=0;combo=0;maxCombo=0;lastCatch=-10;spawnClock=.1;magnetTime=0;magnetCooldown=0;eventClock=0;shake=0;rush=false;lastRush=-1;drops=[];particles=[];labels=[];keys.clear();player.x=w/2;player.target=w/2;mode='playing';$('intro').classList.add('hidden');$('result').classList.add('hidden');$('paused').classList.add('hidden');$('pause').disabled=false;$('pause').textContent='Ⅱ';$('pause').setAttribute('aria-label','一時停止');$('tip').textContent='🧲 下の磁石ボタン / SPACE で、お金をまとめ取り！';announce(STAGES[0].event);syncHud();canvas.focus({preventScroll:true});beep(550);}
 function pause(){if(mode==='playing'){mode='paused';keys.clear();pointerDown=false;$('paused').classList.remove('hidden');$('pause').textContent='▶';$('pause').setAttribute('aria-label','再開');$('resume').focus({preventScroll:true});}else if(mode==='paused'){mode='playing';$('paused').classList.add('hidden');$('pause').textContent='Ⅱ';$('pause').setAttribute('aria-label','一時停止');canvas.focus({preventScroll:true});}syncHud();}
 function finish(){mode='result';age=100;elapsed=DURATION;keys.clear();pointerDown=false;$('pause').disabled=true;$('event').classList.remove('show');$('result').classList.remove('hidden');$('finalMoney').textContent=yen(money);$('gross').textContent=yen(gross);$('expenses').textContent='−'+yen(expenses);$('bestCombo').textContent=maxCombo+' 回';const tier=money>=100000000?['伝説の億万長者','つかんだチャンスは、数えきれない。']:money>=30000000?['お金に愛された人生','最後まで、チャンスを逃さない一生でした。']:money>=10000000?['なかなか豊かな人生','こつこつキャッチが、大きな実りに。']:['伸びしろいっぱいの人生','次の人生は、磁石とコンボで大逆転。'];$('rank').textContent=tier[0];$('resultText').textContent=tier[1];syncHud();$('restart').focus({preventScroll:true});beep(880,.4);}
+function okuMan(n){const v=Math.floor(Math.abs(n)),s=n<0?'-':'',oku=Math.floor(v/1e8),man=Math.floor(v%1e8/1e4);if(!oku&&!man)return s+v.toLocaleString('ja-JP')+'円';return s+(oku?oku.toLocaleString('ja-JP')+'億':'')+(man?man.toLocaleString('ja-JP')+'万':'')+'円';}
+function shareX(){const text=`人生は金がすべて で 100歳まで生きて ${okuMan(money)} 稼いだ！\n#人生は金がすべて #ゲーム制作 #gamedev\nhttps://money-is-everything.okayama.work/`;window.open('https://x.com/intent/post?text='+encodeURIComponent(text),'_blank','noopener');}
 function activateMagnet(){if(mode!=='playing'||magnetCooldown>0)return false;magnetTime=3.6;magnetCooldown=15;announce('🧲 お金を吸い寄せ中！');beep(660,.3,'triangle');syncHud();return true;}
 function spawn(force={}){
  const s=STAGES[stageIndex],bad=force.bad??(stageIndex>0&&Math.random()<.13),gold=!bad&&Math.random()<.13;
@@ -50,7 +52,7 @@ function collect(d){
 }
 function update(dt){
  if(mode!=='playing')return;
- elapsed=Math.min(DURATION,elapsed+dt);age=Math.min(100,Math.floor(6+elapsed/DURATION*94));
+ elapsed=Math.min(DURATION,elapsed+dt);age=Math.min(100,Math.floor(elapsed/DURATION*100));
  const next=STAGES.reduce((acc,s,i)=>age>=s.age?i:acc,0);if(next!==stageIndex){stageIndex=next;announce(STAGES[next].event);beep(740,.2);}
  const cycle=Math.floor(elapsed/18);rush=elapsed%18>=12&&elapsed%18<16;
  if(rush&&lastRush!==cycle){lastRush=cycle;announce(age<18?'お年玉シャワー！':age<50?'臨時ボーナス！ お金の大フィーバー':age<70?'退職金シャワー！':'お祝いシャワー！');}
@@ -86,7 +88,7 @@ function render(time){ctx.clearRect(0,0,w,h);ctx.save();if(shake>0)ctx.translate
  for(const l of labels){ctx.globalAlpha=Math.min(1,l.life*2);ctx.fillStyle=l.color;ctx.font='bold 16px system-ui';ctx.textAlign='center';ctx.fillText(l.text,l.x,l.y);}ctx.globalAlpha=1;
  }ctx.restore();}
 let previous=0;function loop(time){const dt=Math.min((time-previous)/1000,.05);previous=time;update(dt);render(time);frame=requestAnimationFrame(loop);}
-$('start').addEventListener('click',start);$('restart').addEventListener('click',start);$('pause').addEventListener('click',pause);$('resume').addEventListener('click',pause);$('magnet').addEventListener('click',activateMagnet);
+$('start').addEventListener('click',start);$('restart').addEventListener('click',start);$('share').addEventListener('click',shareX);$('pause').addEventListener('click',pause);$('resume').addEventListener('click',pause);$('magnet').addEventListener('click',activateMagnet);
 $('sound').addEventListener('click',()=>{sound=!sound;$('sound').setAttribute('aria-pressed',String(sound));$('sound').setAttribute('aria-label',sound?'サウンドをオフにする':'サウンドをオンにする');$('sound').innerHTML='♪ <span>'+(sound?'ON':'OFF')+'</span>';if(sound)beep(660,.12);});
 window.addEventListener('keydown',e=>{const key=e.key.length===1?e.key.toLowerCase():e.key;if(['ArrowLeft','ArrowRight','a','d',' ','p','Escape'].includes(key)&&['playing','paused'].includes(mode)){e.preventDefault();if((key==='p'||key==='Escape')&&!e.repeat)pause();else if(mode==='playing'){keys.add(key);if(key===' '&&!e.repeat)activateMagnet();}}});
 window.addEventListener('keyup',e=>keys.delete(e.key.length===1?e.key.toLowerCase():e.key));
