@@ -19,7 +19,7 @@
 
 ## 技術
 
-HTML / CSS / JavaScript / Canvas 2D / Web Audio API のみ。ビルド不要、npm依存・外部CDN・サーバー・DBなし。
+HTML / CSS / JavaScript / Canvas 2D / Web Audio API のみ。ビルド不要、npm依存・サーバー・DBなし。
 
 | ファイル | 役割 |
 | --- | --- |
